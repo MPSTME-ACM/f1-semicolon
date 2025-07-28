@@ -1,7 +1,7 @@
 export interface Player {
-  id: string;
+  id: string; // This is the socket.id
   name: string;
-  isHost: boolean;
+  // isHost is no longer needed here
   progress: number;
   wpm: number;
   accuracy: number;
@@ -9,7 +9,8 @@ export interface Player {
 
 export interface LobbyData {
   id: string;
-  players: Player[];
+  host: Player | null; // The host is now a separate entity
+  players: Player[]; // This array only contains the racers
   gameState: 'waiting' | 'in-progress' | 'finished';
   textToType: string;
   startTime: string | null;

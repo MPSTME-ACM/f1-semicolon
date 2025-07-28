@@ -6,6 +6,7 @@ import type { Socket } from 'socket.io-client';
 
 interface GamePageProps {
     lobbyData: LobbyData | null;
+    isHost: boolean;
     me: Player | undefined;
     socket: Socket;
 }
@@ -16,16 +17,16 @@ interface ClientTypingAreaProps {
     socket: Socket;
 }
 
-export default function GamePage({ lobbyData, me, socket }: GamePageProps) {
+export default function GamePage({ lobbyData, isHost, me, socket }: GamePageProps) {
     if (!lobbyData || !me) return <div className="text-center">Loading game...</div>;
 
-    if (me.isHost) {
+    if (isHost) {
         return (
             <div className="w-full animate-fade-in">
                 <RaceTrack players={lobbyData.players} />
                 <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
                     <h3 className="text-xl font-bold text-center mb-4">You are the host. The race is on!</h3>
-                    <p className="text-gray-400 text-center">You can also type on another device by joining your own lobby.</p>
+                    <p className="text-gray-400 text-center">Monitor the race progress above.</p>
                 </div>
             </div>
         );
@@ -37,32 +38,32 @@ export default function GamePage({ lobbyData, me, socket }: GamePageProps) {
 function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
     const { textToType, startTime } = lobbyData;
     const [inputValue, setInputValue] = useState('');
-    const containerRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null); // Ref for the hidden input
 
     const calculateWPM = useCallback((correctChars: number, seconds: number): number => {
         if (seconds <= 0) return 0;
         return Math.round((correctChars / 5) / (seconds / 60));
     }, []);
 
-    // Focus the typing area on mount
+    // Focus the hidden input to bring up the keyboard
+    const focusInput = () => {
+        inputRef.current?.focus();
+    };
+
     useEffect(() => {
-        containerRef.current?.focus();
+        focusInput();
     }, []);
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (me.progress >= 100 || lobbyData.gameState === 'finished') {
-            e.preventDefault();
-            return;
-        }
+    // FIX: Use a standard onChange handler for the input field.
+    // This is more reliable across all devices.
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (me.progress >= 100 || lobbyData.gameState === 'finished') return;
+        
+        const typedValue = e.target.value;
+        // Prevent typing beyond the length of the prompt
+        if (typedValue.length > textToType.length) return;
 
-        if (e.key === 'Backspace') {
-            e.preventDefault();
-            setInputValue(prev => prev.slice(0, -1));
-        } else if (e.key.length === 1) { // Handle single character keys (letters, numbers, symbols)
-            e.preventDefault();
-            setInputValue(prev => prev + e.key);
-        }
-        // We ignore other keys like 'Shift', 'Control', 'Tab', etc.
+        setInputValue(typedValue);
     };
 
     // This effect runs whenever the input value changes to update the server
@@ -88,10 +89,11 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
 
 
     return (
-        <div className="bg-gray-800 p-6 rounded-lg shadow-2xl max-w-3xl mx-auto animate-fade-in">
+        <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-2xl max-w-3xl mx-auto animate-fade-in" onClick={focusInput}>
             <style>{`
                 .blinking-cursor {
                     animation: blink 1s step-end infinite;
+                    font-weight: 200;
                 }
                 @keyframes blink {
                     from, to { color: transparent }
@@ -101,28 +103,38 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
             <h3 className="font-bold text-2xl text-cyan-400 mb-4 text-center">Go, {me?.name}!</h3>
             
             <div
-                ref={containerRef}
-                onKeyDown={handleKeyDown}
-                tabIndex={0}
-                className="text-2xl bg-gray-900 p-6 rounded-md mb-4 whitespace-pre-wrap select-none font-mono leading-relaxed tracking-wider focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                className="relative text-2xl bg-gray-900 p-6 rounded-md mb-4 whitespace-pre-wrap select-none font-mono leading-relaxed tracking-wider cursor-text"
             >
+                {/* The visual representation of the text */}
                 {textToType.split('').map((char, index) => {
                     const isTyped = index < inputValue.length;
                     const isCorrect = isTyped && inputValue[index] === char;
                     const isCurrent = index === inputValue.length;
 
-                    let charClass = 'text-gray-500'; // Untyped
+                    let charClass = 'text-gray-500';
                     if (isTyped && isCorrect) charClass = 'text-green-400';
-                    if (isTyped && !isCorrect) charClass = 'text-red-500 bg-red-500/20';
+                    if (isTyped && !isCorrect) charClass = 'text-red-500 bg-red-500/20 rounded-sm';
                     
                     return (
                         <span key={index} className={charClass}>
+                            {/* The cursor is now an absolutely positioned span for better control */}
                             {isCurrent && <span className="blinking-cursor">|</span>}
                             {char}
                         </span>
                     );
                 })}
-                 {inputValue.length === textToType.length && <span className="blinking-cursor">|</span>}
+                {inputValue.length === textToType.length && lobbyData.gameState !== 'finished' && <span className="blinking-cursor ml-1">|</span>}
+
+                {/* FIX: A hidden input field to capture all keyboard events reliably */}
+                <input
+                    ref={inputRef}
+                    type="text"
+                    value={inputValue}
+                    onChange={handleInputChange}
+                    className="absolute top-0 left-0 w-full h-full opacity-0 cursor-text"
+                    autoFocus
+                    disabled={me?.progress >= 100 || lobbyData.gameState === 'finished'}
+                />
             </div>
 
             <div className="mt-4 flex justify-around text-center">
@@ -140,7 +152,7 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
                 </div>
             </div>
             {me?.progress >= 100 && <p className="text-green-400 font-bold text-center mt-4">You finished! Waiting for others...</p>}
-            {lobbyData.gameState !== 'finished' && me.progress < 100 && <p className="text-gray-500 text-center text-sm mt-4">Click on the text above to start typing.</p>}
+            {lobbyData.gameState !== 'finished' && me.progress < 100 && <p className="text-gray-500 text-center text-sm mt-4">Click the text above to start typing.</p>}
         </div>
     );
 }

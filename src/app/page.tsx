@@ -17,15 +17,26 @@ export default function App() {
     const [playerName, setPlayerName] = useState<string>('');
     const [socketId, setSocketId] = useState<string | null>(null);
 
-    const me = useMemo<Player | undefined>(() => lobbyData?.players.find(p => p.id === socketId), [lobbyData, socketId]);
+    const isHost = useMemo(() => {
+        if (!lobbyData || !socketId) return false;
+        return lobbyData.host?.id === socketId;
+    }, [lobbyData, socketId]);
+
+    // FIX: This logic now correctly handles the case where `lobbyData.host` can be null,
+    // resolving the TypeScript error.
+    const me = useMemo<Player | undefined>(() => {
+        if (!lobbyData || !socketId) return undefined;
+        if (isHost) {
+            return lobbyData.host ?? undefined;
+        }
+        return lobbyData.players.find(p => p.id === socketId);
+    }, [lobbyData, socketId, isHost]);
+
 
     useEffect(() => {
-        // Connect to the Socket.IO server
         socket = io();
 
         socket.on('connect', () => {
-            // FIX: Check if socket.id is defined before setting the state.
-            // This satisfies TypeScript's type checker.
             if (socket.id) {
                 console.log('Connected to socket server with id:', socket.id);
                 setSocketId(socket.id);
@@ -42,6 +53,11 @@ export default function App() {
         socket.on('game-started', (data: LobbyData) => {
             setLobbyData(data);
             setPage('game');
+        });
+
+        socket.on('lobby-closed', () => {
+            alert("The host has disconnected. The lobby is now closed.");
+            handleReset();
         });
 
         return () => {
@@ -82,7 +98,7 @@ export default function App() {
     };
     
     const handleStartGame = () => {
-        if (me?.isHost && lobbyData?.id) {
+        if (isHost && lobbyData?.id) {
             socket.emit('start-game', lobbyData.id);
         }
     };
@@ -97,9 +113,9 @@ export default function App() {
     const renderPage = () => {
         switch (page) {
             case 'lobby':
-                return <LobbyPage lobbyData={lobbyData} me={me} onStartGame={handleStartGame} />;
+                return <LobbyPage lobbyData={lobbyData} isHost={isHost} onStartGame={handleStartGame} />;
             case 'game':
-                return <GamePage lobbyData={lobbyData} me={me} socket={socket} />;
+                return <GamePage lobbyData={lobbyData} isHost={isHost} me={me} socket={socket} />;
             case 'results':
                 return <ResultsPage lobbyData={lobbyData} onReset={handleReset} />;
             case 'home':

@@ -52,7 +52,8 @@ export default function HomePage({ onCreateLobby, onJoinLobby, playerName, setPl
                 <div className="flex-1 text-center">
                     <h2 className="text-2xl font-bold text-white mb-4">Join a Race</h2>
                     <form onSubmit={handleJoinSubmit} className="flex flex-col sm:flex-row gap-3">
-                        <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Lobby Code" className="flex-grow bg-gray-700 text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" maxLength={5} />
+                        {/* FIX: Increased maxLength to 8 to accommodate "ACM-XXXX" format */}
+                        <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Lobby Code" className="flex-grow bg-gray-700 text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" maxLength={8} />
                         <button type="submit" className="bg-red-500 hover:bg-red-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
                             <ArrowRight size={20} /> Join
                         </button>

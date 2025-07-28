@@ -1,14 +1,14 @@
 import React from 'react';
-import { Users, Copy } from 'lucide-react';
-import type { LobbyData, Player } from '../types';
+import { Users, Copy, Crown } from 'lucide-react';
+import type { LobbyData } from '../types';
 
 interface LobbyPageProps {
     lobbyData: LobbyData | null;
-    me: Player | undefined;
+    isHost: boolean;
     onStartGame: () => void;
 }
 
-export default function LobbyPage({ lobbyData, me, onStartGame }: LobbyPageProps) {
+export default function LobbyPage({ lobbyData, isHost, onStartGame }: LobbyPageProps) {
     const copyLobbyCode = () => {
         const lobbyId = lobbyData?.id;
         if (!lobbyId) return;
@@ -30,26 +30,42 @@ export default function LobbyPage({ lobbyData, me, onStartGame }: LobbyPageProps
                 </div>
                 <button onClick={copyLobbyCode} className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md" title="Copy join URL"><Copy size={18} /></button>
             </div>
+
+            {/* Host Display */}
+            <div className="mb-4">
+                <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Crown className="text-yellow-400" /> Host</h3>
+                {lobbyData.host && (
+                     <div className="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
+                        <span className="font-semibold">{lobbyData.host.name} {isHost && "(You)"}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Players Display */}
             <div className="mb-8">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Users size={22} /> Players ({lobbyData.players.length}/4)</h3>
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Users size={22} /> Players ({lobbyData.players.length})</h3>
                 <div className="space-y-3">
-                    {lobbyData.players.map(player => (
-                        <div key={player.id} className="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
-                            <span className="font-semibold">{player.name} {player.id === me?.id && "(You)"}</span>
-                            {player.isHost && <span className="text-xs font-bold text-cyan-400 bg-gray-800 px-2 py-1 rounded-full">HOST</span>}
-                        </div>
-                    ))}
+                    {lobbyData.players.length > 0 ? (
+                        lobbyData.players.map(player => (
+                            <div key={player.id} className="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
+                                <span className="font-semibold">{player.name}</span>
+                            </div>
+                        ))
+                    ) : (
+                        <p className="text-gray-500 text-center py-4">Waiting for players to join...</p>
+                    )}
                 </div>
             </div>
+            
             <div className="text-center">
-                {me?.isHost ? (
-                    <button onClick={onStartGame} disabled={lobbyData.players.length < 2} className="bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                {isHost ? (
+                    <button onClick={onStartGame} disabled={lobbyData.players.length < 1} className="bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed">
                         Start Race
                     </button>
                 ) : (
                     <p className="text-gray-400">Waiting for the host to start the race...</p>
                 )}
-                {me?.isHost && lobbyData.players.length < 2 && <p className="text-yellow-400 text-sm mt-3">Waiting for at least one more player...</p>}
+                {isHost && lobbyData.players.length < 1 && <p className="text-yellow-400 text-sm mt-3">Waiting for at least one player to join...</p>}
             </div>
         </div>
     );
