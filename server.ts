@@ -4,7 +4,7 @@ import next from 'next';
 import { Server } from 'socket.io';
 import type { Player, LobbyData } from './src/app/types';
 
-const dev = process.env.NODE_ENV !== 'production';
+const dev = false;
 const hostname = '0.0.0.0'; 
 const port = 3000;
 
