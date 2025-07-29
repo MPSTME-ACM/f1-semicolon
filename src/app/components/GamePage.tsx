@@ -18,20 +18,20 @@ interface ClientTypingAreaProps {
 }
 
 export default function GamePage({ lobbyData, isHost, me, socket }: GamePageProps) {
-    if (!lobbyData || !me) return <div className="text-center">Loading game...</div>;
+    if (!lobbyData || !me) return <div className="text-center text-white/80">Loading game...</div>;
 
     if (isHost) {
         return (
             <div className="w-full animate-fade-in">
                 <RaceTrack players={lobbyData.players} />
-                <div className="mt-8 bg-gray-800 p-6 rounded-lg shadow-2xl">
-                    <h3 className="text-xl font-bold text-center mb-4">You are the host. The race is on!</h3>
-                    <p className="text-gray-400 text-center">Monitor the race progress above.</p>
+                <div className="mt-8 glass-container p-6 text-center">
+                    <h3 className="text-xl font-bold mb-4 text-white">You are the host. The race is on!</h3>
+                    <p className="text-white/60">Monitor the race progress above.</p>
                 </div>
             </div>
         );
     }
-
+    
     return <ClientTypingArea lobbyData={lobbyData} me={me} socket={socket} />;
 }
 
@@ -110,30 +110,30 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
 
     // The JSX for ClientTypingArea remains the same as your version
     return (
-        <div className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-2xl max-w-3xl mx-auto animate-fade-in" onClick={focusInput}>
+        <div className="glass-container p-4 sm:p-6 max-w-4xl mx-auto animate-fade-in" onClick={focusInput}>
             <style>{`
                 @keyframes blink-border {
                     from, to { border-color: transparent }
-                    50% { border-color: #34d399; }
+                    50% { border-color: #5271FF; /* Assuming a hex for 'true-blue' */ }
                 }
                 .blinking-cursor-border {
                     animation: blink-border 1s step-end infinite;
                     border-left-width: 2px;
                 }
             `}</style>
-            <h3 className="font-bold text-2xl text-blue-400 mb-4 text-center">Go, {me?.name}!</h3>
+            <h3 className="font-bold text-2xl text-true-blue mb-4 text-center">Go, {me?.name}!</h3>
             
             <div
-                className="relative text-2xl bg-gray-900 p-6 rounded-md mb-4 whitespace-pre-wrap select-none font-mono leading-relaxed tracking-wider cursor-text"
+                className="relative text-2xl bg-black/30 border border-white/20 p-6 rounded-md mb-4 whitespace-pre-wrap select-none font-mono leading-relaxed tracking-wider cursor-text"
             >
                 {textToType.split('').map((char, index) => {
                     const isTyped = index < inputValue.length;
                     const isCorrect = isTyped && inputValue[index] === char;
                     const isCurrent = index === inputValue.length;
 
-                    let charClass = 'text-gray-500';
-                    if (isTyped && isCorrect) charClass = 'text-green-400';
-                    if (isTyped && !isCorrect) charClass = 'text-red-500 bg-red-500/20 rounded-sm';
+                    let charClass = 'text-white/40';
+                    if (isTyped && isCorrect) charClass = 'text-white';
+                    if (isTyped && !isCorrect) charClass = 'text-red-400 bg-red-500/20';
                     if (isCurrent) charClass += ' blinking-cursor-border';
                     
                     return <span key={index} className={charClass}>{char}</span>;
@@ -151,22 +151,22 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
                 />
             </div>
 
-            <div className="mt-4 flex justify-around text-center">
+            <div className="mt-4 flex justify-around text-center p-4 bg-black/30 rounded-md">
                 <div>
-                    <p className="text-gray-400 text-sm">WPM</p>
-                    <p className="text-2xl font-bold text-cyan-400">{me?.wpm || 0}</p>
+                    <p className="text-white/60 text-sm">WPM</p>
+                    <p className="text-2xl font-bold text-white">{me?.wpm || 0}</p>
                 </div>
                 <div>
-                    <p className="text-gray-400 text-sm">Accuracy</p>
-                    <p className="text-2xl font-bold text-blue-500">{(me?.accuracy || 100).toFixed(1)}%</p>
+                    <p className="text-white/60 text-sm">Accuracy</p>
+                    <p className="text-2xl font-bold text-true-blue">{(me?.accuracy || 100).toFixed(1)}%</p>
                 </div>
                  <div>
-                    <p className="text-gray-400 text-sm">Progress</p>
-                    <p className="text-2xl font-bold text-blue-400">{(me?.progress || 0).toFixed(0)}%</p>
+                    <p className="text-white/60 text-sm">Progress</p>
+                    <p className="text-2xl font-bold text-white">{(me?.progress || 0).toFixed(0)}%</p>
                 </div>
             </div>
-            {me?.progress >= 100 && <p className="text-green-400 font-bold text-center mt-4">You finished! Waiting for others...</p>}
-            {lobbyData.gameState !== 'finished' && me.progress < 100 && <p className="text-gray-500 text-center text-sm mt-4">Click the text above to start typing.</p>}
+            {me?.progress >= 100 && <p className="text-white font-bold text-center mt-4">You finished! Waiting for others...</p>}
+            {lobbyData.gameState !== 'finished' && me.progress < 100 && <p className="text-white/50 text-center text-sm mt-4">Click the text above to start typing.</p>}
         </div>
     );
 }

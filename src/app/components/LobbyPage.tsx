@@ -19,54 +19,52 @@ export default function LobbyPage({ lobbyData, isHost, onStartGame }: LobbyPageP
         });
     };
     
-    if (!lobbyData) return <div className="text-center text-xl">Loading lobby...</div>;
+    if (!lobbyData) return <div className="text-center text-xl text-white/80">Loading lobby...</div>;
 
     return (
-        <div className="bg-gray-800 p-8 rounded-lg shadow-2xl animate-fade-in max-w-2xl mx-auto">
-            <h2 className="text-3xl font-bold text-cyan-400 text-center mb-6">Lobby</h2>
-            <div className="mb-6 bg-gray-900 p-4 rounded-lg flex items-center justify-between">
+        <div className="glass-container p-8 max-w-2xl mx-auto animate-fade-in">
+            <h2 className="text-3xl font-bold text-true-blue text-center mb-6">Lobby</h2>
+            <div className="mb-6 bg-black/30 border border-white/20 p-4 rounded-lg flex items-center justify-between">
                 <div>
-                    <span className="text-gray-400">Lobby Code: <span className="text-white font-bold">{lobbyData.id}</span></span>
-                    <p className="text-gray-400 text-sm">Share this code or the page URL for friends to join.</p>
+                    <span className="text-white/80">Lobby Code: <span className="text-white font-bold tracking-widest">{lobbyData.id}</span></span>
+                    <p className="text-white/60 text-sm">Share this code or the page URL for friends to join.</p>
                 </div>
-                <button onClick={copyLobbyCode} className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md" title="Copy Lobby Code"><Copy size={18} /></button>
+                <button onClick={copyLobbyCode} className="btn btn-secondary" title="Copy Lobby Code"><Copy size={18} /></button>
             </div>
 
-            {/* Host Display */}
             <div className="mb-4">
-                <h3 className="text-xl font-bold mb-2 flex items-center gap-2"><Crown className="text-yellow-400" /> Host</h3>
+                <h3 className="text-xl font-bold mb-2 flex items-center gap-2 text-white/80"><Crown className="text-true-blue" /> Host</h3>
                 {lobbyData.host && (
-                     <div className="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
-                        <span className="font-semibold">{lobbyData.host.name} {isHost && "(You)"}</span>
+                     <div className="bg-black/30 p-4 rounded-lg">
+                        <span className="font-semibold text-white">{lobbyData.host.name} {isHost && <span className="text-white/60">(You)</span>}</span>
                     </div>
                 )}
             </div>
 
-            {/* Players Display */}
             <div className="mb-8">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Users size={22} /> Players ({lobbyData.players.length})</h3>
+                <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-white/80"><Users size={22} /> Players ({lobbyData.players.length})</h3>
                 <div className="space-y-3">
                     {lobbyData.players.length > 0 ? (
                         lobbyData.players.map(player => (
-                            <div key={player.id} className="bg-gray-700 p-4 rounded-lg flex items-center justify-between">
-                                <span className="font-semibold">{player.name}</span>
+                            <div key={player.id} className="bg-black/30 p-4 rounded-lg">
+                                <span className="font-semibold text-white">{player.name}</span>
                             </div>
                         ))
                     ) : (
-                        <p className="text-gray-500 text-center py-4">Waiting for players to join...</p>
+                        <p className="text-white/50 text-center py-4">Waiting for players to join...</p>
                     )}
                 </div>
             </div>
             
             <div className="text-center">
                 {isHost ? (
-                    <button onClick={onStartGame} disabled={lobbyData.players.length < 1} className="bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-8 rounded-lg shadow-lg transition-transform transform hover:scale-105 disabled:bg-gray-600 disabled:cursor-not-allowed">
+                    <button onClick={onStartGame} disabled={lobbyData.players.length < 1} className="btn btn-primary w-full max-w-xs mx-auto">
                         Start Race
                     </button>
                 ) : (
-                    <p className="text-gray-400">Waiting for the host to start the race...</p>
+                    <p className="text-white/60">Waiting for the host to start the race...</p>
                 )}
-                {isHost && lobbyData.players.length < 1 && <p className="text-yellow-400 text-sm mt-3">Waiting for at least one player to join...</p>}
+                {isHost && lobbyData.players.length < 1 && <p className="text-true-blue/70 text-sm mt-3">Waiting for at least one player to join...</p>}
             </div>
         </div>
     );
