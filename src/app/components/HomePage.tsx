@@ -17,9 +17,7 @@ export default function HomePage({ onCreateLobby, onJoinLobby, playerName, setPl
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
         const lobbyIdFromUrl = urlParams.get('lobby');
-        if (lobbyIdFromUrl) {
-            setJoinCode(lobbyIdFromUrl);
-        }
+        if (lobbyIdFromUrl) setJoinCode(lobbyIdFromUrl);
     }, []);
 
     const handleJoinSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -28,34 +26,33 @@ export default function HomePage({ onCreateLobby, onJoinLobby, playerName, setPl
     };
 
     return (
-        <div className="bg-gray-800 p-8 rounded-lg shadow-2xl max-w-3xl mx-auto animate-fade-in">
-            {error && <div className="bg-red-500/20 border border-red-500 text-red-300 p-3 rounded-lg mb-6 text-center">{error}</div>}
+        <div className="glass-container p-8 max-w-3xl mx-auto animate-fade-in">
+            {error && <div className="bg-white/10 border border-red-500 text-red-300 p-3 rounded-lg mb-6 text-center">{error}</div>}
             <div className="mb-6">
-                <label htmlFor="playerName" className="block text-lg font-bold mb-2 text-center">Enter Your Name</label>
+                <label htmlFor="playerName" className="block text-lg font-bold mb-2 text-center text-white/80">Enter Your Name</label>
                 <input
                     id="playerName"
                     type="text"
                     value={playerName}
                     onChange={(e) => { setPlayerName(e.target.value); setError(''); }}
-                    placeholder="Your Name"
-                    className="w-full max-w-sm mx-auto block bg-gray-700 text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 text-center"
+                    placeholder="Racer Name"
+                    className="w-full max-w-sm mx-auto block bg-black/30 text-white placeholder-white/40 p-3 rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-true-blue text-center tracking-widest"
                 />
             </div>
             <div className="flex flex-col md:flex-row items-center justify-center gap-8">
                  <div className="flex-1 text-center">
-                    <h2 className="text-2xl font-bold text-white mb-4">Create a Race</h2>
-                    <button onClick={onCreateLobby} className="w-full bg-cyan-500 hover:bg-cyan-400 text-gray-900 font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
-                        <Rocket size={20} /> Create Lobby
+                    <h2 className="text-2xl font-bold mb-4">Create a Race</h2>
+                    <button onClick={onCreateLobby} className="btn btn-primary w-full">
+                        Create Lobby
                     </button>
                 </div>
-                <div className="w-full md:w-px h-px md:h-32 bg-gray-600"></div>
+                <div className="w-full md:w-px h-px md:h-24 bg-white/10"></div>
                 <div className="flex-1 text-center">
-                    <h2 className="text-2xl font-bold text-white mb-4">Join a Race</h2>
+                    <h2 className="text-2xl font-bold mb-4">Join a Race</h2>
                     <form onSubmit={handleJoinSubmit} className="flex flex-col sm:flex-row gap-3">
-                        {/* FIX: Increased maxLength to 8 to accommodate "ACM-XXXX" format */}
-                        <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} placeholder="Lobby Code" className="flex-grow bg-gray-700 text-white placeholder-gray-400 p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500" maxLength={8} />
-                        <button type="submit" className="bg-red-500 hover:bg-red-400 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center gap-2">
-                            <ArrowRight size={20} /> Join
+                        <input type="text" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} placeholder="ACM..." className="flex-grow bg-black/30 text-white placeholder-white/40 p-3 rounded-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-true-blue text-center tracking-widest" maxLength={6} />
+                        <button type="submit" className="btn btn-secondary">
+                            Join
                         </button>
                     </form>
                 </div>
