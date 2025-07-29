@@ -2,6 +2,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import RaceTrack from './RaceTrack';
 import type { LobbyData, Player } from '../types';
+import { TrackId } from '../tracks';
 import type { Socket } from 'socket.io-client';
 
 interface GamePageProps {
@@ -23,7 +24,8 @@ export default function GamePage({ lobbyData, isHost, me, socket }: GamePageProp
     if (isHost) {
         return (
             <div className="w-full animate-fade-in">
-                <RaceTrack players={lobbyData.players} />
+                {/* Add the trackId prop here */}
+                <RaceTrack players={lobbyData.players} trackId={lobbyData.trackId as TrackId} />
                 <div className="mt-8 glass-container p-6 text-center">
                     <h3 className="text-xl font-bold mb-4 text-white">You are the host. The race is on!</h3>
                     <p className="text-white/60">Monitor the race progress above.</p>

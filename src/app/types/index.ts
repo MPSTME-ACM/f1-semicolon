@@ -16,3 +16,14 @@ export interface LobbyData {
   startTime: string | null;
   winner: Player | null;
 }
+
+export interface LobbyData {
+    id: string;
+    host: Player | null;
+    players: Player[];
+    gameState: 'waiting' | 'in-progress' | 'finished';
+    textToType: string;
+    startTime: string | null;
+    winner: Player | null;
+    trackId: string; // Add this line
+}

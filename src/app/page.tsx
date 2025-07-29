@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import HomePage from './components/HomePage';
 import LobbyPage from './components/LobbyPage';
+import { TRACK_DATA } from './tracks'; // Add this line
 import GamePage from './components/GamePage';
 import ResultsPage from './components/ResultsPage';
 import type { LobbyData, Player } from './types';
@@ -97,6 +98,12 @@ export default function App() {
         });
     };
     
+    const handleSelectTrack = (trackId: keyof typeof TRACK_DATA) => {
+        if (isHost && lobbyData?.id) {
+            socket.emit('select-track', { lobbyId: lobbyData.id, trackId });
+        }
+    };
+
     const handleStartGame = () => {
         if (isHost && lobbyData?.id) {
             socket.emit('start-game', lobbyData.id);
@@ -113,7 +120,7 @@ export default function App() {
     const renderPage = () => {
         switch (page) {
             case 'lobby':
-                return <LobbyPage lobbyData={lobbyData} isHost={isHost} onStartGame={handleStartGame} />;
+                return <LobbyPage lobbyData={lobbyData} isHost={isHost} onStartGame={handleStartGame} onSelectTrack={handleSelectTrack} />;
             case 'game':
                 return <GamePage lobbyData={lobbyData} isHost={isHost} me={me} socket={socket} />;
             case 'results':
