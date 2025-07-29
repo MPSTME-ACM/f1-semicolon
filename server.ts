@@ -25,8 +25,8 @@ const lobbies = new Map<string, LobbyData>();
 
 // --- NEW: Custom Room ID Generator ---
 const generateLobbyId = (): string => {
-    const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
-    return `ACM-${randomPart}`;
+    const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `ACM${randomPart}`;
 };
 
 app.prepare().then(() => {

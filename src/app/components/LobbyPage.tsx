@@ -12,9 +12,10 @@ export default function LobbyPage({ lobbyData, isHost, onStartGame }: LobbyPageP
     const copyLobbyCode = () => {
         const lobbyId = lobbyData?.id;
         if (!lobbyId) return;
-        const urlToCopy = `${window.location.origin}?lobby=${lobbyId}`;
-        navigator.clipboard.writeText(urlToCopy).then(() => {
-            alert(`Lobby URL copied to clipboard!\nShare this with your friends.`);
+        // Copy only the lobby ID
+        navigator.clipboard.writeText(lobbyId).then(() => {
+            // Update the confirmation message
+            alert(`Lobby Code "${lobbyId}" copied to clipboard!`);
         });
     };
     
@@ -26,9 +27,9 @@ export default function LobbyPage({ lobbyData, isHost, onStartGame }: LobbyPageP
             <div className="mb-6 bg-gray-900 p-4 rounded-lg flex items-center justify-between">
                 <div>
                     <span className="text-gray-400">Lobby Code: <span className="text-white font-bold">{lobbyData.id}</span></span>
-                    <p className="text-gray-400 text-sm">Share this code or the URL with friends.</p>
+                    <p className="text-gray-400 text-sm">Share this code or the page URL for friends to join.</p>
                 </div>
-                <button onClick={copyLobbyCode} className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md" title="Copy join URL"><Copy size={18} /></button>
+                <button onClick={copyLobbyCode} className="p-2 bg-gray-700 hover:bg-gray-600 rounded-md" title="Copy Lobby Code"><Copy size={18} /></button>
             </div>
 
             {/* Host Display */}
