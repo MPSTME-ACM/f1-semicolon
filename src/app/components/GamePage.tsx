@@ -100,7 +100,7 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
                     50% { color: #34d399; }
                 }
             `}</style>
-            <h3 className="font-bold text-2xl text-cyan-400 mb-4 text-center">Go, {me?.name}!</h3>
+            <h3 className="font-bold text-2xl text-blue-400 mb-4 text-center">Go, {me?.name}!</h3>
             
             <div
                 className="relative text-2xl bg-gray-900 p-6 rounded-md mb-4 whitespace-pre-wrap select-none font-mono leading-relaxed tracking-wider cursor-text"
@@ -144,11 +144,11 @@ function ClientTypingArea({ lobbyData, me, socket }: ClientTypingAreaProps) {
                 </div>
                 <div>
                     <p className="text-gray-400 text-sm">Accuracy</p>
-                    <p className="text-2xl font-bold text-green-400">{(me?.accuracy || 100).toFixed(1)}%</p>
+                    <p className="text-2xl font-bold text-blue-500">{(me?.accuracy || 100).toFixed(1)}%</p>
                 </div>
                  <div>
                     <p className="text-gray-400 text-sm">Progress</p>
-                    <p className="text-2xl font-bold text-yellow-400">{(me?.progress || 0).toFixed(0)}%</p>
+                    <p className="text-2xl font-bold text-blue-400">{(me?.progress || 0).toFixed(0)}%</p>
                 </div>
             </div>
             {me?.progress >= 100 && <p className="text-green-400 font-bold text-center mt-4">You finished! Waiting for others...</p>}
