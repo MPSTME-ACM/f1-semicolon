@@ -15,11 +15,66 @@ const port = parseInt(process.env.PORT || '3000', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-const TEXT_SAMPLES: string[] = [
-    "The quick brown fox jumps over the lazy dog. This sentence contains all the letters of the alphabet. Speed and accuracy are key to winning this race.",
-    "Formula 1 is the pinnacle of motorsport, featuring the world's best drivers and most advanced racing technology. A single mistake can cost you the race.",
-    "To be a great programmer is to become a problem-solver. You must learn to think algorithmically and break down complex problems into smaller, manageable parts."
-];
+dotenv.config();
+
+const FALLBACK_TEXT = "The quick brown fox jumps over the lazy dog. This is a fallback text in case the API fails.";
+
+// Define a fixed target length for all race paragraphs
+const TARGET_LENGTH = 1000;
+// To be safe, fetch a quote that is slightly longer than our target
+const MIN_FETCH_LENGTH = 1020;
+
+async function fetchTextToType(): Promise<string> {
+    const apiKey = process.env.API_NINJAS_KEY;
+
+    if (!apiKey) {
+        console.error("API_NINJAS_KEY not found in the .env file. Using fallback text.");
+        return FALLBACK_TEXT;
+    }
+
+    // Fetch a quote that is guaranteed to be long enough for us to trim
+    const url = `https://api.api-ninjas.com/v1/quotes?min_length=${MIN_FETCH_LENGTH}`;
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'X-Api-Key': apiKey },
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`API call failed with status: ${response.status}`, errorBody);
+            return FALLBACK_TEXT;
+        }
+
+        const data: { quote: string }[] = await response.json();
+
+        if (data.length > 0 && data[0].quote) {
+            let text = data[0].quote;
+            
+            // 1. Trim the text to our target length
+            text = text.substring(0, TARGET_LENGTH);
+            
+            // 2. Find the last space to avoid cutting off a word mid-sentence
+            const lastSpaceIndex = text.lastIndexOf(' ');
+            if (lastSpaceIndex > 0) {
+                text = text.substring(0, lastSpaceIndex);
+            }
+
+            // 3. Ensure the text ends cleanly with a period
+            if (!text.endsWith('.')) {
+                text += '.';
+            }
+
+            return text;
+        } else {
+            console.warn("API returned no quotes matching the criteria. Using fallback.");
+            return FALLBACK_TEXT;
+        }
+    } catch (error) {
+        console.error("Failed to fetch text from API. Check your network connection or API key.", error);
+        return FALLBACK_TEXT;
+    }
+}
 
 const lobbies = new Map<string, LobbyData>();
 
@@ -45,19 +100,22 @@ app.prepare().then(() => {
 
   io.on('connection', socket => {
     console.log(`Socket connected: ${socket.id}`);
-    
-    socket.on('create-lobby', (playerName: string, callback: (payload: { lobbyId: string; lobbyData: LobbyData }) => void) => {
-      const lobbyId = generateLobbyId(); // Use the new generator
+
+    socket.on('create-lobby', async (playerName: string, callback: (payload: { lobbyId: string; lobbyData: LobbyData }) => void) => {
+      const lobbyId = generateLobbyId();
       socket.join(lobbyId);
-      
+
       const hostPlayer: Player = { id: socket.id, name: playerName, progress: 0, wpm: 0, accuracy: 100 };
-      
+
+      // ✨ Fetch a new random paragraph for this lobby
+      const textToType = await fetchTextToType();
+
       const newLobby: LobbyData = {
         id: lobbyId,
-        host: hostPlayer, // Assign the creator as the host
-        players: [], // The players array starts empty
+        host: hostPlayer,
+        players: [],
         gameState: 'waiting',
-        textToType: TEXT_SAMPLES[Math.floor(Math.random() * TEXT_SAMPLES.length)],
+        textToType: textToType, // Use the dynamically fetched text
         startTime: null,
         winner: null,
       };
