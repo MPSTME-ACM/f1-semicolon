@@ -125,7 +125,7 @@ export default function App() {
     };
 
     return (
-        <div className="bg-black text-white min-h-screen font-mono flex flex-col items-center justify-center p-4">
+        <div className="text-white min-h-screen font-mono flex flex-col items-center justify-center p-4">
             <div className="w-full max-w-6xl mx-auto">
                 <header className="w-full text-center mb-8">
                     <h1 className="text-5xl font-bold text-white tracking-wider">Semi<span className="text-blue-400">Colon</span> F1</h1>

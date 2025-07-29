@@ -5,14 +5,37 @@ interface F1CarProps {
 }
 
 export default function F1Car({ color }: F1CarProps) {
+    // We create a unique ID for the glow filter based on the color
+    // to prevent conflicts if multiple cars are on the track.
+    const filterId = `glow-${color.replace('#', '')}`;
+
     return (
-        <svg width="40" height="40" viewBox="0 0 100 40" className="transform -rotate-90">
-            <rect x="20" y="0" width="60" height="10" className={color} rx="2" />
-            <rect x="0" y="10" width="100" height="20" className={color} rx="5" />
-            <rect x="30" y="30" width="40" height="10" className={color} rx="2" />
-            <rect x="5" y="5" width="10" height="30" className="fill-current text-gray-900" rx="3" />
-            <rect x="85" y="5" width="10" height="30" className="fill-current text-gray-900" rx="3" />
-            <circle cx="50" cy="15" r="5" className="fill-current text-gray-900" />
-        </svg>
+        <g>
+            <defs>
+                <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+                    {/* This SVG filter creates the blur effect for the glow */}
+                    <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+                    <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+            <circle
+                r="7" // The radius of the dot
+                cx="0"
+                cy="0"
+                fill={color}
+                filter={`url(#${filterId})`} // Apply the glow filter
+            >
+                {/* This SVG animation tag makes the dot's opacity pulse */}
+                <animate
+                    attributeName="opacity"
+                    values="0.6;1;0.6"
+                    dur="2s"
+                    repeatCount="indefinite"
+                />
+            </circle>
+        </g>
     );
 }

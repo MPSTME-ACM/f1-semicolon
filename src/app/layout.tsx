@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google"; // ← Add Space Grotesk
 import "./globals.css";
+import FlickeringBackground from "./components/FlickeringBackground";
 
 // Load Space Grotesk (set it as a CSS variable for use)
 const spaceGrotesk = Space_Grotesk({
@@ -42,6 +43,7 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <FlickeringBackground />
         {children}
       </body>
     </html>
