@@ -133,7 +133,7 @@ export default function App() {
 
     return (
         <div className="text-white min-h-screen font-mono flex flex-col items-center justify-center p-4">
-            <div className="w-full max-w-6xl mx-auto">
+            <div className="w-full max-w-7xl mx-auto">
                 <header className="w-full text-center mb-8">
                     <h1 className="text-5xl font-bold text-white tracking-wider">Semi<span className="text-blue-400">Colon</span> F1</h1>
                     <p className="text-gray-400 mt-2">The Networked Multiplayer Typing Showdown.</p>
