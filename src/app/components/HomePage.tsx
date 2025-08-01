@@ -40,13 +40,6 @@ export default function HomePage({ onCreateLobby, onJoinLobby, playerName, setPl
                 />
             </div>
             <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-                 <div className="flex-1 text-center">
-                    <h2 className="text-2xl font-bold mb-4">Create a Race</h2>
-                    <button onClick={onCreateLobby} className="btn btn-primary w-full">
-                        Create Lobby
-                    </button>
-                </div>
-                <div className="w-full md:w-px h-px md:h-24 bg-white/10"></div>
                 <div className="flex-1 text-center">
                     <h2 className="text-2xl font-bold mb-4">Join a Race</h2>
                     <form onSubmit={handleJoinSubmit} className="flex flex-col sm:flex-row gap-3">
@@ -55,6 +48,13 @@ export default function HomePage({ onCreateLobby, onJoinLobby, playerName, setPl
                             Join
                         </button>
                     </form>
+                </div>
+                <div className="w-full md:w-px h-px md:h-24 bg-white/10"></div>
+                <div className="flex-1 text-center">
+                    <h2 className="text-2xl font-bold mb-4">Create a Race</h2>
+                    <button onClick={onCreateLobby} className="btn btn-primary w-full">
+                        Create Lobby
+                    </button>
                 </div>
             </div>
         </div>
