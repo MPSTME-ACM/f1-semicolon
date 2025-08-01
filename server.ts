@@ -5,6 +5,7 @@ import next from 'next';
 import { Server } from 'socket.io';
 import type { Player, LobbyData } from './src/app/types';
 import { TRACK_DATA, TrackId } from './src/app/tracks.js';
+import { TEXT_SAMPLES } from './src/app/components/TextSamples.js';
 
 // Load environment variables from the .env file
 dotenv.config();
@@ -16,69 +17,6 @@ const port = parseInt(process.env.PORT || '3000', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-const FALLBACK_TEXT = "The quick brown fox jumps over the lazy dog. This is a fallback text in case the API fails.";
-
-// Define a fixed target length for all race paragraphs
-const TARGET_LENGTH = 240;
-// To be safe, fetch a quote that is slightly longer than our target
-const MIN_FETCH_LENGTH = 260;
-
-async function fetchTextToType(): Promise<string> {
-  const apiKey = process.env.API_NINJAS_KEY;
-
-  if (!apiKey) {
-    console.error("API_NINJAS_KEY not found in the .env file. Using fallback text.");
-    return FALLBACK_TEXT;
-  }
-
-  // Fetch a quote that is guaranteed to be long enough for us to trim
-  const url = `https://api.api-ninjas.com/v1/quotes?min_length=${MIN_FETCH_LENGTH}`;
-
-  try {
-    const response = await fetch(url, {
-      headers: { 'X-Api-Key': apiKey },
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      console.error(`API call failed with status: ${response.status}`, errorBody);
-      return FALLBACK_TEXT;
-    }
-
-    const data: { quote: string }[] = await response.json();
-
-    if (data.length > 0 && data[0].quote) {
-      let text = data[0].quote;
-
-      while (text.length < TARGET_LENGTH) {
-        text += " " + text;
-      }
-
-      // 2. Trim to exact target length
-      text = text.substring(0, TARGET_LENGTH);
-
-      // 3. Find the last space to avoid cutting off a word mid-sentence
-      const lastSpaceIndex = text.lastIndexOf(' ');
-      if (lastSpaceIndex > TARGET_LENGTH - 50) { // Only trim if we're not cutting too much
-        text = text.substring(0, lastSpaceIndex);
-      }
-
-      // 3. Ensure the text ends cleanly with a period
-      if (!text.endsWith('.')) {
-        text += '.';
-      }
-
-      return text;
-    } else {
-      console.warn("API returned no quotes matching the criteria. Using fallback.");
-      return FALLBACK_TEXT;
-    }
-  } catch (error) {
-    console.error("Failed to fetch text from API. Check your network connection or API key.", error);
-    return FALLBACK_TEXT;
-  }
-}
-
 const lobbies = new Map<string, LobbyData>();
 
 // --- NEW: Custom Room ID Generator ---
@@ -86,6 +24,29 @@ const generateLobbyId = (): string => {
   const randomPart = Math.random().toString(36).substring(2, 5).toUpperCase();
   return `ACM${randomPart}`;
 };
+
+// Helper function to get an available paragraph for a new player
+function getAvailableParagraph(lobby: LobbyData): string {
+  const assignedTexts = lobby.players.map(p => p.textToType);
+  let availableSamples = TEXT_SAMPLES.filter(sample => !assignedTexts.includes(sample));
+
+  // If all unique samples are used, just pick any random one
+  if (availableSamples.length === 0) {
+    availableSamples = TEXT_SAMPLES;
+  }
+
+  return availableSamples[Math.floor(Math.random() * availableSamples.length)];
+}
+
+function calculateServerAccuracy(originalText: string, typedText: string): number {
+    let correctChars = 0;
+    for (let i = 0; i < originalText.length; i++) {
+        if (typedText[i] && typedText[i] === originalText[i]) {
+            correctChars++;
+        }
+    }
+    return (correctChars / originalText.length) * 100;
+}
 
 app.prepare().then(() => {
   const httpServer = createServer(async (req, res) => {
@@ -104,14 +65,11 @@ app.prepare().then(() => {
   io.on('connection', socket => {
     console.log(`Socket connected: ${socket.id}`);
 
-    socket.on('create-lobby', async (playerName: string, callback: (payload: { lobbyId: string; lobbyData: LobbyData }) => void) => {
+    socket.on('create-lobby', (playerName: string, callback: (payload: { lobbyId: string; lobbyData: LobbyData }) => void) => {
       const lobbyId = generateLobbyId();
       socket.join(lobbyId);
 
-      const hostPlayer: Player = { id: socket.id, name: playerName, progress: 0, wpm: 0, accuracy: 100 };
-
-      // ✨ Fetch a new random paragraph for this lobby
-      const textToType = await fetchTextToType();
+      const hostPlayer: Player = { id: socket.id, name: playerName, progress: 0, wpm: 0, accuracy: 100, textToType: '' };
 
       const newLobby: LobbyData = {
         id: lobbyId,
@@ -119,7 +77,6 @@ app.prepare().then(() => {
         players: [],
         trackId: 'track1',
         gameState: 'waiting',
-        textToType: textToType, // Use the dynamically fetched text
         startTime: null,
         winner: null,
       };
@@ -150,7 +107,14 @@ app.prepare().then(() => {
         }
 
         socket.join(lobbyId);
-        const newPlayer: Player = { id: socket.id, name: playerName, progress: 0, wpm: 0, accuracy: 100 };
+        const newPlayer: Player = {
+          id: socket.id,
+          name: playerName,
+          progress: 0,
+          wpm: 0,
+          accuracy: 100,
+          textToType: getAvailableParagraph(lobby)
+        };
         lobby.players.push(newPlayer); // Add the new person to the players array
 
         io.to(lobbyId).emit('lobby-updated', lobby);
@@ -170,6 +134,20 @@ app.prepare().then(() => {
       }
     });
 
+    socket.on('player-update', ({ lobbyId, playerUpdate }) => {
+        const lobby = lobbies.get(lobbyId);
+        if (lobby) {
+            lobby.players = lobby.players.map(p => p.id === socket.id ? { ...p, ...playerUpdate } : p);
+
+            // The winner is now determined by the 'submit-final-text' event
+            const allFinished = lobby.players.every(p => p.progress >= 100);
+            if (allFinished && lobby.players.length > 0) {
+                lobby.gameState = 'finished';
+            }
+            io.to(lobbyId).emit('lobby-updated', lobby);
+        }
+    });
+
     socket.on('player-update', ({ lobbyId, playerUpdate }: { lobbyId: string; playerUpdate: Partial<Player> }) => {
       const lobby = lobbies.get(lobbyId);
       if (lobby) {
@@ -184,6 +162,26 @@ app.prepare().then(() => {
           }
           return p;
         });
+
+        socket.on('submit-final-text', ({ lobbyId, finalInput }: { lobbyId: string, finalInput: string }) => {
+        const lobby = lobbies.get(lobbyId);
+        const player = lobby?.players.find(p => p.id === socket.id);
+
+        if (lobby && player && !lobby.winner) {
+            const serverAccuracy = calculateServerAccuracy(player.textToType, finalInput);
+            
+            // A player must have at least 70% accuracy to win
+            const MIN_ACCURACY_TO_WIN = 70; 
+
+            if (serverAccuracy >= MIN_ACCURACY_TO_WIN) {
+                lobby.winner = player;
+                console.log(`${player.name} finished with a valid accuracy of ${serverAccuracy.toFixed(1)}% and is the winner!`);
+                io.to(lobbyId).emit('lobby-updated', lobby);
+            } else {
+                console.log(`${player.name} finished with an invalid accuracy of ${serverAccuracy.toFixed(1)}%. Not a winner.`);
+            }
+        }
+    });
 
         // Check if all *players* (not the host) have finished
         const allFinished = lobby.players.every(p => p.progress >= 100);
