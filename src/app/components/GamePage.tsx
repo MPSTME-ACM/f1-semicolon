@@ -1,5 +1,6 @@
 'use client'
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { AudioEngineManager } from '../lib/AudioEngineManager';
 import RaceTrack from './RaceTrack';
 import CountdownLights from './CountdownLights';
 import type { LobbyData, Player } from '../types';
@@ -24,6 +25,8 @@ export default function GamePage({ lobbyData, isHost, me, socket }: GamePageProp
     const [lightsOn, setLightsOn] = useState(0);
     const [raceStarted, setRaceStarted] = useState(false);
 
+    const audioManagerRef = useRef<AudioEngineManager | null>(null);
+
     useEffect(() => {
         const timers: NodeJS.Timeout[] = [];
         for (let i = 1; i <= 5; i++) {
@@ -36,19 +39,44 @@ export default function GamePage({ lobbyData, isHost, me, socket }: GamePageProp
         return () => timers.forEach(clearTimeout);
     }, []);
 
+    useEffect(() => {
+        if (isHost) {
+            const enableAudio = () => {
+                const manager = new AudioEngineManager();
+                manager.loadSound('/engine-loop.mp3');
+                audioManagerRef.current = manager;
+                // Clean up the event listener after it's used once
+                document.removeEventListener('click', enableAudio);
+            };
+            document.addEventListener('click', enableAudio, { once: true });
+
+            // On cleanup, stop all sounds
+            return () => {
+                audioManagerRef.current?.stopAll();
+                document.removeEventListener('click', enableAudio);
+            };
+        }
+    }, [isHost]);
+
+    useEffect(() => {
+        if (isHost && audioManagerRef.current && lobbyData?.players) {
+            audioManagerRef.current.updateAllPlayers(lobbyData.players);
+        }
+    }, [isHost, lobbyData?.players]);
+
     if (!lobbyData || !me) return <div className="text-center text-white/80">Loading game...</div>;
 
     return (
         <div className="w-full relative">
             {!raceStarted && <CountdownLights lightsOn={lightsOn} />}
-            
+
             {isHost ? (
                 <div className="w-full animate-fade-in">
-                    {/* The incorrect 'hostId' prop has been removed */}
                     <RaceTrack players={lobbyData.players} trackId={lobbyData.trackId as TrackId} />
                     <div className="mt-8 glass-container p-6 text-center">
                         <h3 className="text-xl font-bold mb-4 text-white">You are the host. The race is on!</h3>
                         <p className="text-white/60">Monitor the race progress above.</p>
+                        <p className="text-xs text-true-blue mt-4 animate-pulse">Click anywhere to enable race audio.</p>
                     </div>
                 </div>
             ) : (
@@ -60,19 +88,21 @@ export default function GamePage({ lobbyData, isHost, me, socket }: GamePageProp
 
 function ClientTypingArea({ lobbyData, me, socket, raceStarted }: ClientTypingAreaProps) {
     const { startTime } = lobbyData;
-    const { textToType } = me; 
+    const { textToType } = me;
     const [inputValue, setInputValue] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
-    const textContainerRef = useRef<HTMLDivElement>(null); // Ref for the text container div
-    const caretRef = useRef<HTMLDivElement>(null);       // Ref for the new caret element
+    const caretRef = useRef<HTMLDivElement>(null);
+    const textBlockRef = useRef<HTMLDivElement>(null);
+    const [textTransformY, setTextTransformY] = useState(0);
     const [typingStats, setTypingStats] = useState({
         totalStrokes: 0,
         mistakes: 0,
     });
 
-    const calculateWPM = useCallback((correctChars: number, seconds: number): number => {
+    const calculateWPM = useCallback((totalTypedChars: number, seconds: number): number => {
         if (seconds <= 0) return 0;
-        return Math.round((correctChars / 5) / (seconds / 60));
+        // Standard WPM calculation: (characters typed / 5) / (seconds / 60)
+        return Math.round((totalTypedChars / 5) / (seconds / 60));
     }, []);
 
     const focusInput = () => {
@@ -86,9 +116,12 @@ function ClientTypingArea({ lobbyData, me, socket, raceStarted }: ClientTypingAr
         }
     }, [raceStarted]);
 
+    // Split text into words for better line management
+    const words = textToType.split(' ');
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (me.progress >= 100 || lobbyData.gameState === 'finished') return;
-        
+
         const typedValue = e.target.value;
         if (typedValue.length > textToType.length) return;
 
@@ -106,122 +139,178 @@ function ClientTypingArea({ lobbyData, me, socket, raceStarted }: ClientTypingAr
     };
 
     useEffect(() => {
-        if (!startTime || !raceStarted) return; // Don't send updates during countdown
+        if (!raceStarted) return;
 
+        const textBlock = textBlockRef.current;
+        if (!textBlock) return;
+
+        // Use rAF to wait for the DOM to be ready for measurement
+        requestAnimationFrame(() => {
+            const currentCharElement = textBlock.querySelector<HTMLElement>('[data-current-char="true"]');
+
+            if (currentCharElement) {
+                const lineHeight = 48;
+                const textBlockRect = textBlock.getBoundingClientRect();
+                const charRect = currentCharElement.getBoundingClientRect();
+                const charTopInFullText = charRect.top - textBlockRect.top;
+                const currentLineIndex = Math.round(charTopInFullText / lineHeight);
+                const targetTransformY = -Math.max(0, (currentLineIndex - 1) * lineHeight);
+
+                if (targetTransformY !== textTransformY) {
+                    setTextTransformY(targetTransformY);
+                }
+            }
+        });
+
+    }, [inputValue, raceStarted, textTransformY]);
+
+
+    // EFFECT 2: Handles Caret, Stats, and Socket updates
+    useEffect(() => {
+        if (!startTime || !raceStarted) return;
+
+        // Stats and Socket logic
         let correctChars = 0;
         for (let i = 0; i < inputValue.length; i++) {
             if (inputValue[i] === textToType[i]) correctChars++;
         }
-        
         const progress = (inputValue.length / textToType.length) * 100;
         const elapsedSeconds = (new Date().getTime() - new Date(startTime).getTime()) / 1000;
         const wpm = calculateWPM(correctChars, elapsedSeconds);
-        const accuracy = typingStats.totalStrokes > 0 
-            ? ((typingStats.totalStrokes - typingStats.mistakes) / typingStats.totalStrokes) * 100 
+        const accuracy = typingStats.totalStrokes > 0
+            ? ((typingStats.totalStrokes - typingStats.mistakes) / typingStats.totalStrokes) * 100
             : 100;
+        socket.emit('player-update', { lobbyId: lobbyData.id, playerUpdate: { progress, wpm, accuracy: parseFloat(accuracy.toFixed(1)) } });
+        if (inputValue.length === textToType.length) {
+            socket.emit('submit-final-text', { lobbyId: lobbyData.id, finalInput: inputValue });
+        }
 
-        const container = textContainerRef.current;
-        const caret = caretRef.current;
+        // Caret positioning logic
+        requestAnimationFrame(() => {
+            const caret = caretRef.current;
+            const textBlock = textBlockRef.current;
+            if (!caret || !textBlock) return;
 
-        if (container && caret) {
-            const currentLetterSpan = container.querySelector<HTMLElement>('.current-char');
-            
-            if (currentLetterSpan) {
-                // This part is working correctly
-                currentLetterSpan.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            const container = caret.parentElement;
+            if (!container) return;
 
-                // --- FIX STARTS HERE ---
-                // Calculate the correct top position to appear as an underline
-                const newTop = currentLetterSpan.offsetTop + currentLetterSpan.offsetHeight - 4; // Position 4px above the bottom of the line
-                const newLeft = currentLetterSpan.offsetLeft;
-                const newWidth = currentLetterSpan.offsetWidth;
+            const currentCharElement = textBlock.querySelector<HTMLElement>('[data-current-char="true"]');
 
-                // Apply the new position and size
-                caret.style.transform = `translate(${newLeft}px, ${newTop}px)`;
-                caret.style.width = `${newWidth}px`;
-                caret.style.opacity = '1'; // Ensure the caret is visible
+            if (currentCharElement) {
+                void textBlock.offsetHeight;
+
+                const textBlockRect = textBlock.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const charRect = currentCharElement.getBoundingClientRect();
+
+                caret.style.left = `${charRect.left - containerRect.left}px`;
+                caret.style.top = `${charRect.top - containerRect.top + charRect.height - 3}px`;
+                caret.style.width = `${charRect.width}px`;
+                caret.style.opacity = '1';
             } else {
-                // Hide the caret if there's no active character (e.g., at the end of the race)
                 caret.style.opacity = '0';
             }
-        }
-
-        socket.emit('player-update', {
-            lobbyId: lobbyData.id,
-            playerUpdate: { progress, wpm, accuracy: parseFloat(accuracy.toFixed(1)) }
         });
 
-        if (inputValue.length === textToType.length) {
-            socket.emit('submit-final-text', {
-                lobbyId: lobbyData.id,
-                finalInput: inputValue,
-            });
-        }
-    }, [inputValue, textToType, startTime, lobbyData.id, socket, calculateWPM, typingStats, raceStarted]);
-
+    }, [inputValue, raceStarted, textTransformY, startTime, textToType, lobbyData.id, socket, calculateWPM, typingStats]);
 
     return (
-        <div 
-            className="glass-container p-4 sm:p-6 max-w-4xl mx-auto animate-fade-in flex flex-col h-[calc(100vh-12rem)]" 
+        <div
+            className="flex flex-col h-[calc(100vh-12rem)] items-center justify-center p-4 sm:p-6 max-w-6xl mx-auto animate-fade-in"
             onClick={focusInput}
         >
-            <h3 className="font-bold text-2xl text-true-blue mb-4 text-center flex-shrink-0">Go, {me?.name}!</h3>
-            
-            <div
-                className="relative text-2xl bg-black/30 border border-white/20 p-6 rounded-md mb-4 whitespace-pre-wrap select-none font-mono leading-relaxed tracking-wider cursor-text flex-grow overflow-y-auto w-[95%] md:w-full mx-auto"
-            >
+            <h3 className="font-bold text-2xl text-true-blue mb-6 text-center flex-shrink-0">Go, {me?.name}!</h3>
+
+            {/* Text Display Container */}
+            <div className="relative w-full max-w-4xl flex-grow flex items-center justify-center">
                 <div
-                    ref={caretRef}
-                    className="absolute h-[3px] bg-true-blue rounded-sm transition-all duration-150 ease-out"
-                    style={{ opacity: 0 }} // Start hidden, let useEffect handle positioning and visibility
-                />
+                    className="relative overflow-hidden cursor-text select-none"
+                    style={{
+                        height: '156px',
+                        lineHeight: '48px',
+                        fontSize: '32px'
+                    }}
+                >
+                    {/* Caret */}
+                    <div
+                        ref={caretRef}
+                        className="absolute h-[3px] bg-white rounded-sm transition-all duration-150 ease-out z-10"
+                        style={{ opacity: 0 }}
+                    />
 
-                {textToType.split('').map((char, index) => {
-                    const isTyped = index < inputValue.length;
-                    const isCorrect = isTyped && inputValue[index] === char;
-                    const isCurrent = index === inputValue.length;
+                    {/* Text Content*/}
+                    <div
+                        ref={textBlockRef}
+                        className="relative font-mono tracking-wide leading-relaxed px-4 whitespace-pre-wrap break-words transition-transform duration-200 ease-linear"
+                        style={{ transform: `translateY(${textTransformY}px)` }}
+                    >
+                        {textToType.split('').map((char, index) => {
+                            const isTyped = index < inputValue.length;
+                            const isCorrect = isTyped && inputValue[index] === char;
+                            const isCurrent = index === inputValue.length;
 
-                    // The old blinking border is no longer needed
-                    let charClass = 'text-white/40';
-                    if (isTyped && isCorrect) charClass = 'text-white';
-                    if (isTyped && !isCorrect) charClass = 'text-red-400 bg-red-500/20';
-                    // Add a special class to the current character so we can find it
-                    if (isCurrent) charClass += ' current-char';
-                    
-                    return <span key={index} className={charClass}>{char}</span>;
-                })}
-                {inputValue.length === textToType.length && lobbyData.gameState !== 'finished' && <span className="blinking-cursor-border">&nbsp;</span>}
+                            let charClass = 'text-gray-500 transition-colors duration-75';
+                            if (isTyped && isCorrect) {
+                                charClass = 'text-white';
+                            } else if (isTyped && !isCorrect) {
+                                charClass = 'text-red-400 bg-red-500/30 rounded-sm';
+                            }
 
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={inputValue}
-                    onChange={handleInputChange}
-                    className="absolute top-0 left-0 w-full h-full opacity-0 cursor-text"
-                    autoFocus
-                    disabled={!raceStarted || me?.progress >= 100 || lobbyData.gameState === 'finished'}
-                />
+                            if (isCurrent && raceStarted) {
+                                return (
+                                    <span key={index} className={charClass} data-current-char="true">
+                                        {char}
+                                    </span>
+                                );
+                            }
+
+                            return (
+                                <span key={index} className={charClass}>
+                                    {char}
+                                </span>
+                            );
+                        })}
+                    </div>
+
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={inputValue}
+                        onChange={handleInputChange}
+                        className="absolute top-0 left-0 w-full h-full opacity-0 cursor-text"
+                        autoFocus
+                        disabled={!raceStarted || me?.progress >= 100 || lobbyData.gameState === 'finished'}
+                        style={{ caretColor: 'transparent' }}
+                    />
+                </div>
             </div>
 
-            <div className="flex-shrink-0">
-                <div className="flex justify-around text-center p-4 bg-black/30 rounded-md">
-                    <div>
-                        <p className="text-white/60 text-sm">WPM</p>
+            {/* Stats and Status */}
+            <div className="flex-shrink-0 mt-6">
+                <div className="flex justify-around text-center p-4 bg-black/30 rounded-lg backdrop-blur-sm">
+                    <div className="px-4">
+                        <p className="text-white/60 text-sm mb-1">WPM</p>
                         <p className="text-2xl font-bold text-white">{me?.wpm || 0}</p>
                     </div>
-                    <div>
-                        <p className="text-white/60 text-sm">Accuracy</p>
+                    <div className="px-4">
+                        <p className="text-white/60 text-sm mb-1">Accuracy</p>
                         <p className="text-2xl font-bold text-true-blue">{(me?.accuracy || 100).toFixed(1)}%</p>
                     </div>
-                    <div>
-                        <p className="text-white/60 text-sm">Progress</p>
+                    <div className="px-4">
+                        <p className="text-white/60 text-sm mb-1">Progress</p>
                         <p className="text-2xl font-bold text-white">{(me?.progress || 0).toFixed(0)}%</p>
                     </div>
                 </div>
-                <div className="text-center mt-4 h-6"> {/* Added fixed height to prevent layout shift */}
-                    {me?.progress >= 100 && <p className="text-white font-bold">You finished! Waiting for others...</p>}
-                    {lobbyData.gameState !== 'finished' && !raceStarted && <p className="text-white/50 text-sm">Get ready...</p>}
-                    {lobbyData.gameState !== 'finished' && raceStarted && me.progress < 100 && <p className="text-white/50 text-sm">Click the text above to start typing.</p>}
+                <div className="text-center mt-4 h-6">
+                    {me?.progress >= 100 && (
+                        <p className="text-green-400 font-bold">🏁 You finished! Waiting for others...</p>
+                    )}
+                    {lobbyData.gameState !== 'finished' && !raceStarted && (
+                        <p className="text-white/50 text-sm">Get ready to type...</p>
+                    )}
+                    {lobbyData.gameState !== 'finished' && raceStarted && me.progress < 100 && (
+                        <p className="text-white/50 text-sm">Keep typing! 🚀</p>
+                    )}
                 </div>
             </div>
         </div>

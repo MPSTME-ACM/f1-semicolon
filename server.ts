@@ -7,9 +7,6 @@ import type { Player, LobbyData } from './src/app/types';
 import { TRACK_DATA, TrackId } from './src/app/tracks.js';
 import { TEXT_SAMPLES } from './src/app/components/TextSamples.js';
 
-// Load environment variables from the .env file
-dotenv.config();
-
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || '0.0.0.0';
 const port = parseInt(process.env.PORT || '3000', 10);
