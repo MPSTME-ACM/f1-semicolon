@@ -7,9 +7,11 @@ import type { Player, LobbyData } from './src/app/types';
 import { TRACK_DATA, TrackId } from './src/app/tracks.js';
 import { TEXT_SAMPLES } from './src/app/components/TextSamples.js';
 
+dotenv.config();
+
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || '0.0.0.0';
-const port = parseInt(process.env.PORT || '3000', 10);
+const port = parseInt(process.env.PORT || '5050', 10);
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();

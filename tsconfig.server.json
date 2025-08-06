@@ -1,7 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "NodeNext",
+    "module": "es2020",
+    "moduleResolution": "node",
+    "bundle": true,
     "outDir": "dist",
     "noEmit": false
   },
