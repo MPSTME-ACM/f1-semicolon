@@ -235,13 +235,13 @@ function ClientTypingArea({ lobbyData, me, socket, raceStarted }: ClientTypingAr
                     <div
                         ref={caretRef}
                         className="absolute h-[3px] bg-white rounded-sm transition-all duration-150 ease-out z-10"
-                        style={{ opacity: 0 }}
+                        style={{ opacity: 0, transition: 'left 150ms ease-out, top 150ms ease-out, opacity 150ms ease-out' }}
                     />
 
                     {/* Text Content*/}
                     <div
                         ref={textBlockRef}
-                        className="relative font-mono tracking-wide leading-relaxed px-4 whitespace-pre-wrap break-words transition-transform duration-200 ease-linear"
+                        className="relative font-mono tracking-wide leading-relaxed px-4 whitespace-pre-wrap break-words ease-linear"
                         style={{ transform: `translateY(${textTransformY}px)` }}
                     >
                         {textToType.split('').map((char, index) => {
