@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google"; // ← Add Space Grotesk
 import "./globals.css";
 import FlickeringBackground from "./components/FlickeringBackground";
@@ -37,12 +38,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Optional: fallback favicon.ico for older browsers */}
         <link rel="alternate icon" href="/favicon.ico" />
       </head>
       <body
         className={`${spaceGrotesk.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 md:left-auto md:right-4 md:translate-x-0 z-50 md:mb-4">
+          <Image
+            src="/favicon.svg"
+            alt="F1 SemiColon Logo"
+            width={140}
+            height={110}
+            className="w-[100px] h-auto md:w-[78px]"
+            priority
+          />
+        </div>
         <FlickeringBackground />
         {children}
       </body>
