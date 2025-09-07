@@ -43,7 +43,7 @@ export default function RootLayout({
       <body
         className={`${spaceGrotesk.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="fixed top-10 left-1/2 -translate-x-1/2 md:left-auto md:right-4 md:translate-x-0 z-50 md:mb-4">
+{/*         <div className="fixed top-10 left-1/2 -translate-x-1/2 md:left-auto md:right-4 md:translate-x-0 z-50 md:mb-4">
           <Image
             src="/favicon.svg"
             alt="F1 SemiColon Logo"
@@ -52,7 +52,7 @@ export default function RootLayout({
             className="w-[100px] h-auto md:w-[78px]"
             priority
           />
-        </div>
+        </div> */}
         <FlickeringBackground />
         {children}
       </body>
